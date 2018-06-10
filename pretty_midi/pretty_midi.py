@@ -1390,7 +1390,7 @@ class PrettyMIDI(object):
         if type == 0:
             # clinch off the track and add it
             data_track.append(mido.MetaMessage(
-                'end_of_track', time=data_track.time + 1))
+                'end_of_track', time=data_track[-1].time + 1))
             mid.tracks.append(data_track)
 
         # Turn ticks to relative time from absolute
