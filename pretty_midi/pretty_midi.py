@@ -1214,14 +1214,15 @@ class PrettyMIDI(object):
         for instrument in self.instruments:
             instrument.remove_invalid_notes()
 
-    def write(self, filename):
+    def write(self, filename, type=1):
         """Write the MIDI data out to a .mid file.
 
         Parameters
         ----------
         filename : str or file
             Path or file to write .mid file to.
-
+        type: int in {0,1}
+            Type 0 or 1 MIDI file
         """
 
         def event_compare(event1, event2):
@@ -1268,10 +1269,14 @@ class PrettyMIDI(object):
             # Otherwise, just return the difference of their ticks.
             return event1.time - event2.time
 
+        if type not in {0,1}:
+            raise NotImplementedError("Only Type 0 and 1 MIDI files are supported")
+        data_track = mido.MidiTrack()
+
         # Initialize output MIDI object
-        mid = mido.MidiFile(ticks_per_beat=self.resolution)
-        # Create track 0 with timing information
-        timing_track = mido.MidiTrack()
+        mid = mido.MidiFile(type=type, ticks_per_beat=self.resolution)
+        # Create track 0 with timing information if Type 1, else write all to one track
+        timing_track = mido.MidiTrack() if type == 1 else data_track
         # Add a default time signature only if there is not one at time 0.
         add_ts = True
         if self.time_signature_changes:
@@ -1319,8 +1324,8 @@ class PrettyMIDI(object):
         # Don't assign the drum channel by mistake!
         channels.remove(9)
         for n, instrument in enumerate(self.instruments):
-            # Initialize track for this instrument
-            track = mido.MidiTrack()
+            # Initialize new track for this instrument if Type 1
+            track = mido.MidiTrack() if type == 1 else data_track
             # Add track name event if instrument has a name
             if instrument.name:
                 track.append(mido.MetaMessage(
