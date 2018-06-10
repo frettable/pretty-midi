@@ -1314,15 +1314,20 @@ class PrettyMIDI(object):
                 'lyrics', time=self.time_to_tick(l.time), text=l.text))
         # Sort the (absolute-tick-timed) events.
         timing_track.sort(key=functools.cmp_to_key(event_compare))
-        # Add in an end of track event
-        timing_track.append(mido.MetaMessage(
-            'end_of_track', time=timing_track[-1].time + 1))
-        mid.tracks.append(timing_track)
+        if type == 1:
+            # Add in an end of track event
+            timing_track.append(mido.MetaMessage(
+                'end_of_track', time=timing_track[-1].time + 1))
+            mid.tracks.append(timing_track)
         # Create a list of possible channels to assign - this seems to matter
         # for some synths.
         channels = list(range(16))
         # Don't assign the drum channel by mistake!
         channels.remove(9)
+        if len(self.instruments) > len(channels):
+            raise IOError("Too many instrument tracks allowed (%d/%d) for Type 0 MIDI file export" % (
+                len(self.instruments), len(channels)
+            ))
         for n, instrument in enumerate(self.instruments):
             # Initialize new track for this instrument if Type 1
             track = mido.MidiTrack() if type == 1 else data_track
@@ -1376,11 +1381,18 @@ class PrettyMIDI(object):
                         event2.velocity == 0):
                     track[n] = event2
                     track[n + 1] = event1
-            # Finally, add in an end of track event
-            track.append(mido.MetaMessage(
-                'end_of_track', time=track[-1].time + 1))
-            # Add to the list of output tracks
-            mid.tracks.append(track)
+            if type == 1:
+                # Finally, add in an end of track event
+                track.append(mido.MetaMessage(
+                    'end_of_track', time=track[-1].time + 1))
+                # Add to the list of output tracks
+                mid.tracks.append(track)
+        if type == 0:
+            # clinch off the track and add it
+            data_track.append(mido.MetaMessage(
+                'end_of_track', time=data_track.time + 1))
+            mid.tracks.append(data_track)
+
         # Turn ticks to relative time from absolute
         for track in mid.tracks:
             tick = 0
